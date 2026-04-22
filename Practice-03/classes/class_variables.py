@@ -1,8 +1,8 @@
 class Circle:
-    pi = 3.14 # Class variable
+    pi = 3.14 
 
     def __init__(self, radius):
-        self.radius = radius # Instance variable
+        self.radius = radius 
 
 c1 = Circle(5)
 print(c1.pi, c1.radius)
