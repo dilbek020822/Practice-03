@@ -1,4 +1,4 @@
-# connect.py  –  Thin wrapper around psycopg2 connection
+
 
 import psycopg2
 from psycopg2.extras import RealDictCursor
