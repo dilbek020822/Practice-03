@@ -1,6 +1,4 @@
-# config.py — Snake Game Configuration
 
-# Window & Grid
 WINDOW_WIDTH  = 800
 WINDOW_HEIGHT = 620
 HUD_HEIGHT    = 60
