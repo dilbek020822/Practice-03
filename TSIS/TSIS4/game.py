@@ -23,9 +23,7 @@ from config import (
     POWERUP_EFFECT_MS, POWERUP_FIELD_MS,
 )
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Enumerations
-# ─────────────────────────────────────────────────────────────────────────────
+
 
 class GameState(Enum):
     MENU        = auto()
@@ -64,9 +62,6 @@ class PowerUpKind(Enum):
     SHIELD      = "shield"
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Data classes
-# ─────────────────────────────────────────────────────────────────────────────
 
 class Food:
     _CONFIG = {
@@ -116,10 +111,6 @@ class PowerUp:
         return (now - self.spawn_ms) > POWERUP_FIELD_MS
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Snake game simulation
-# ─────────────────────────────────────────────────────────────────────────────
-
 class SnakeGame:
     """Holds all mutable game state and update logic."""
 
@@ -147,8 +138,7 @@ class SnakeGame:
         self.move_accum     = 0.0        # fractional move accumulator (seconds)
         self._spawn_food()
 
-    # ── helpers ──────────────────────────────────────────────────────────────
-
+    
     def _occupied(self) -> set:
         occ = set(self.body) | set(self.obstacles)
         for f in self.foods:
@@ -167,7 +157,6 @@ class SnakeGame:
         ]
         return random.choice(free) if free else None
 
-    # ── spawning ─────────────────────────────────────────────────────────────
 
     def _spawn_food(self) -> None:
         now = pygame.time.get_ticks()
@@ -178,7 +167,7 @@ class SnakeGame:
             if pos:
                 self.foods.append(Food(pos, FoodType.NORMAL, now))
 
-        # Optionally add a special food (max 3 total)
+  
         if len(self.foods) < 3:
             r = random.random()
             if r < 0.18:
@@ -207,7 +196,7 @@ class SnakeGame:
         count = OBSTACLE_BASE_COUNT + (self.level - 3) * OBSTACLE_PER_LEVEL
         count = min(count, OBSTACLE_MAX)
 
-        # Safe zone: 4-cell radius around snake head
+ 
         head = self.body[0]
         safe: set = set(self.body)
         for dx in range(-4, 5):
@@ -215,7 +204,7 @@ class SnakeGame:
                 safe.add((head[0] + dx, head[1] + dy))
 
         new_obs: list[tuple] = []
-        for _ in range(count * 10):           # try hard to place them all
+        for _ in range(count * 10):          
             if len(new_obs) >= count:
                 break
             x = random.randint(1, GRID_WIDTH  - 2)
@@ -225,7 +214,6 @@ class SnakeGame:
                 new_obs.append(p)
         self.obstacles = new_obs
 
-    # ── input ────────────────────────────────────────────────────────────────
 
     def handle_key(self, key: int) -> None:
         mapping = {
@@ -243,7 +231,7 @@ class SnakeGame:
             if wanted != self.direction.opposite():
                 self.queued_dir = wanted
 
-    # ── update ───────────────────────────────────────────────────────────────
+
 
     def update(self, dt: float) -> None:
         """Called every display frame; dt is seconds since last frame."""
@@ -252,30 +240,26 @@ class SnakeGame:
 
         now = pygame.time.get_ticks()
 
-        # ── expire power-up on field ──────────────────────────────────────
+   
         if self.power_up and self.power_up.is_expired(now):
             self.power_up = None
 
-        # ── expire active effect ──────────────────────────────────────────
         if self.active_effect and now >= self.active_effect[1]:
             self._clear_effect()
 
-        # ── remove expired timed foods ────────────────────────────────────
         self.foods = [f for f in self.foods if not f.is_expired(now)]
 
-        # ── accumulate and check if it's time to move ─────────────────────
         self.move_accum += dt
         if self.move_accum < 1.0 / self.speed:
             return
         self.move_accum -= 1.0 / self.speed
 
-        # ── move snake ────────────────────────────────────────────────────
+  
         self.direction = self.queued_dir
         dx, dy = self.direction.value
         hx, hy = self.body[0]
         new_head = (hx + dx, hy + dy)
 
-        # Collision checks ────────────────────────────────────────────────
         wall_hit     = (new_head[0] <= 0 or new_head[0] >= GRID_WIDTH  - 1 or
                         new_head[1] <= 0 or new_head[1] >= GRID_HEIGHT - 1)
         obstacle_hit = new_head in self.obstacles
@@ -285,22 +269,21 @@ class SnakeGame:
             if self.shield_ready:
                 self.shield_ready = False
                 self.active_effect = None
-                return          # collision absorbed — don't move this tick
+                return         
             self.alive = False
             return
 
-        # Advance head
+       
         self.body.insert(0, new_head)
         grow = False
 
-        # ── check food ────────────────────────────────────────────────────
         eaten: Optional[Food] = next(
             (f for f in self.foods if f.pos == new_head), None
         )
         if eaten:
             self.foods.remove(eaten)
             if eaten.ftype == FoodType.POISON:
-                # Shrink by 2 extra segments (already inserted head, so pop 3)
+                
                 for _ in range(3):
                     if len(self.body) > 1:
                         self.body.pop()
@@ -325,17 +308,17 @@ class SnakeGame:
         if not grow:
             self.body.pop()   # remove tail (no growth)
 
-        # ── check power-up pickup ─────────────────────────────────────────
+       
         if self.power_up and new_head == self.power_up.pos:
             self._collect_power_up(self.power_up)
             self.power_up = None
 
-        # ── ensure food exists ────────────────────────────────────────────
+      
         self._spawn_food()
 
     def _update_base_speed(self) -> None:
         base = FPS_BASE + (self.level - 1) * SPEED_INCREMENT
-        # Only override speed if no time-based effect is overriding it
+      
         if self.active_effect is None:
             self.speed = base
 
@@ -361,8 +344,7 @@ class SnakeGame:
         self.shield_ready  = False
         self._update_base_speed()
 
-    # ── convenience properties ────────────────────────────────────────────────
-
+  
     @property
     def head(self) -> tuple:
         return self.body[0]
@@ -375,9 +357,6 @@ class SnakeGame:
         return max(0.0, 1.0 - elapsed / POWERUP_EFFECT_MS)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Button helper
-# ─────────────────────────────────────────────────────────────────────────────
 
 class Button:
     def __init__(self, rect: pygame.Rect, text: str,
