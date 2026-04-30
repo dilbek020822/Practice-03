@@ -1,13 +1,4 @@
--- ============================================================
---  PhoneBook  –  Stored Procedures & Functions  (Practice 9)
---  Do NOT duplicate procedures already defined in Practice 8.
--- ============================================================
 
-
--- ------------------------------------------------------------
--- 1. add_phone
---    Adds a new phone number to an existing contact by name.
--- ------------------------------------------------------------
 CREATE OR REPLACE PROCEDURE add_phone(
     p_contact_name VARCHAR,
     p_phone        VARCHAR,
@@ -17,12 +8,12 @@ LANGUAGE plpgsql AS $$
 DECLARE
     v_contact_id INTEGER;
 BEGIN
-    -- Validate phone type
+  
     IF p_type NOT IN ('home', 'work', 'mobile') THEN
         RAISE EXCEPTION 'Invalid phone type "%". Must be home, work, or mobile.', p_type;
     END IF;
 
-    -- Resolve contact
+   
     SELECT id INTO v_contact_id
     FROM   contacts
     WHERE  LOWER(name) = LOWER(p_contact_name)
@@ -32,7 +23,6 @@ BEGIN
         RAISE EXCEPTION 'Contact "%" not found.', p_contact_name;
     END IF;
 
-    -- Prevent exact duplicate
     IF EXISTS (
         SELECT 1 FROM phones
         WHERE contact_id = v_contact_id AND phone = p_phone
@@ -49,10 +39,7 @@ END;
 $$;
 
 
--- ------------------------------------------------------------
--- 2. move_to_group
---    Moves a contact to a group; creates the group if absent.
--- ------------------------------------------------------------
+
 CREATE OR REPLACE PROCEDURE move_to_group(
     p_contact_name VARCHAR,
     p_group_name   VARCHAR
@@ -62,7 +49,7 @@ DECLARE
     v_contact_id INTEGER;
     v_group_id   INTEGER;
 BEGIN
-    -- Resolve (or create) group
+
     SELECT id INTO v_group_id
     FROM   groups
     WHERE  LOWER(name) = LOWER(p_group_name)
@@ -75,7 +62,7 @@ BEGIN
         RAISE NOTICE 'Created new group "%".', p_group_name;
     END IF;
 
-    -- Resolve contact
+
     SELECT id INTO v_contact_id
     FROM   contacts
     WHERE  LOWER(name) = LOWER(p_contact_name)
@@ -94,11 +81,7 @@ END;
 $$;
 
 
--- ------------------------------------------------------------
--- 3. search_contacts  (extends Practice-8 pattern search)
---    Matches against: name, email, AND all phones in phones table.
---    Returns one row per contact (phones collapsed into array).
--- ------------------------------------------------------------
+
 CREATE OR REPLACE FUNCTION search_contacts(p_query TEXT)
 RETURNS TABLE (
     contact_id INTEGER,
@@ -106,7 +89,7 @@ RETURNS TABLE (
     email      VARCHAR,
     birthday   DATE,
     group_name VARCHAR,
-    phones     TEXT,       -- comma-separated list of phone:type pairs
+    phones     TEXT,      
     created_at TIMESTAMP
 )
 LANGUAGE plpgsql AS $$
