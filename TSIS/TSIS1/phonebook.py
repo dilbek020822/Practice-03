@@ -11,7 +11,7 @@ Extends Practice 7 & 8 with:
 """
 import io
 
-# Принудительно переключаем вывод в UTF-8
+
 
 import csv
 import json
@@ -24,9 +24,7 @@ from psycopg2.extras import RealDictCursor
 
 from connect import get_connection, get_cursor
 
-# ──────────────────────────────────────────────────────────────
-# Pretty-print helpers
-# ──────────────────────────────────────────────────────────────
+
 if sys.stdout.encoding != 'utf-8':
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 SEP  = "─" * 70
@@ -58,9 +56,6 @@ def _print_contacts(rows):
     print(f"  {len(rows)} contact(s) shown.")
 
 
-# ──────────────────────────────────────────────────────────────
-# Schema bootstrap  (idempotent – safe to call every run)
-# ──────────────────────────────────────────────────────────────
 def bootstrap_schema(conn):
     """Apply schema.sql and procedures.sql if not already applied."""
     base = os.path.dirname(os.path.abspath(__file__))
@@ -74,9 +69,6 @@ def bootstrap_schema(conn):
     print("✔  Schema and procedures loaded.")
 
 
-# ──────────────────────────────────────────────────────────────
-# 3.4 – Stored procedure wrappers
-# ──────────────────────────────────────────────────────────────
 def db_add_phone(conn, contact_name: str, phone: str, phone_type: str):
     with conn.cursor() as cur:
         cur.execute(
@@ -101,9 +93,7 @@ def db_search_contacts(conn, query: str) -> list[dict]:
         return cur.fetchall()
 
 
-# ──────────────────────────────────────────────────────────────
-# Helper: resolve or create a group, return its id
-# ──────────────────────────────────────────────────────────────
+
 def _resolve_group(cur, group_name: str) -> int | None:
     if not group_name:
         return None
@@ -122,9 +112,6 @@ def _resolve_group(cur, group_name: str) -> int | None:
     return row[0] if isinstance(row, tuple) else row["id"]
 
 
-# ──────────────────────────────────────────────────────────────
-# 3.3 – CSV import (extended)
-# ──────────────────────────────────────────────────────────────
 def import_csv(conn, filepath: str):
     """
     Import contacts from CSV.
@@ -164,7 +151,6 @@ def import_csv(conn, filepath: str):
 
                 group_id = _resolve_group(cur, group_name) if group_name else None
 
-                # Upsert contact (by name)
                 cur.execute("""
                     INSERT INTO contacts (name, email, birthday, group_id)
                     VALUES (%s, %s, %s, %s)
@@ -174,14 +160,14 @@ def import_csv(conn, filepath: str):
                 result = cur.fetchone()
 
                 if result is None:
-                    # Contact exists – fetch its id
+  
                     cur.execute("SELECT id FROM contacts WHERE LOWER(name)=LOWER(%s);", (name,))
                     result = cur.fetchone()
                     contact_id = result[0] if isinstance(result, tuple) else result["id"]
                 else:
                     contact_id = result[0] if isinstance(result, tuple) else result["id"]
 
-                # Insert phone if provided and not duplicate
+    
                 if phone:
                     cur.execute("""
                         INSERT INTO phones (contact_id, phone, type)
@@ -195,9 +181,6 @@ def import_csv(conn, filepath: str):
     print(f"  ✔  CSV import done: {inserted} processed, {skipped} skipped.")
 
 
-# ──────────────────────────────────────────────────────────────
-# 3.3 – JSON export
-# ──────────────────────────────────────────────────────────────
 def export_json(conn, filepath: str = "contacts_export.json"):
     with get_cursor(conn) as cur:
         cur.execute("""
@@ -220,7 +203,7 @@ def export_json(conn, filepath: str = "contacts_export.json"):
         """)
         rows = cur.fetchall()
 
-    # Convert RealDictRow → plain dict
+
     data = [dict(r) for r in rows]
 
     with open(filepath, "w", encoding="utf-8") as f:
@@ -229,9 +212,7 @@ def export_json(conn, filepath: str = "contacts_export.json"):
     print(f"  ✔  Exported {len(data)} contacts to '{filepath}'.")
 
 
-# ──────────────────────────────────────────────────────────────
-# 3.3 – JSON import
-# ──────────────────────────────────────────────────────────────
+
 def import_json(conn, filepath: str = "contacts_export.json"):
     if not os.path.exists(filepath):
         print(f"  ✗  File not found: {filepath}")
@@ -263,7 +244,6 @@ def import_json(conn, filepath: str = "contacts_export.json"):
 
             group_id = _resolve_group(cur, group_name) if group_name else None
 
-            # Check for existing contact
             cur.execute(
                 "SELECT id FROM contacts WHERE LOWER(name)=LOWER(%s);",
                 (name,),
@@ -280,7 +260,7 @@ def import_json(conn, filepath: str = "contacts_export.json"):
                         SET email=%(e)s, birthday=%(b)s, group_id=%(g)s
                         WHERE id=%(id)s;
                     """, {"e": email, "b": birthday, "g": group_id, "id": contact_id})
-                    # Replace phones
+                
                     cur.execute("DELETE FROM phones WHERE contact_id=%s;", (contact_id,))
                     overwritten += 1
                 else:
@@ -315,9 +295,6 @@ def import_json(conn, filepath: str = "contacts_export.json"):
     )
 
 
-# ──────────────────────────────────────────────────────────────
-# 3.2 – Filter / sort queries
-# ──────────────────────────────────────────────────────────────
 
 SORT_COLUMNS = {
     "1": ("c.name",       "Name"),
@@ -379,9 +356,7 @@ def search_by_email(conn, fragment: str, sort_col: str = "c.name") -> list[dict]
         return cur.fetchall()
 
 
-# ──────────────────────────────────────────────────────────────
-# 3.2 – Paginated navigation (uses DB function from Practice 8)
-# ──────────────────────────────────────────────────────────────
+
 PAGE_SIZE = 5
 
 def paginated_browse(conn):
@@ -423,9 +398,7 @@ def paginated_browse(conn):
             print("  Invalid option.")
 
 
-# ──────────────────────────────────────────────────────────────
-# Sort picker (reusable)
-# ──────────────────────────────────────────────────────────────
+
 def _pick_sort() -> str:
     print("\n  Sort by:")
     for k, (_, label) in SORT_COLUMNS.items():
@@ -435,9 +408,6 @@ def _pick_sort() -> str:
     return col
 
 
-# ──────────────────────────────────────────────────────────────
-# CRUD helpers  (add contact, add phone, move group)
-# ──────────────────────────────────────────────────────────────
 def add_contact(conn):
     _header("Add New Contact")
     name = input("  Name: ").strip()
@@ -535,9 +505,6 @@ def delete_contact(conn):
         print(f"  ✗  Contact '{name}' not found.")
 
 
-# ──────────────────────────────────────────────────────────────
-# Console search menus
-# ──────────────────────────────────────────────────────────────
 def console_search(conn):
     _header("Search Contacts (name / email / phone)")
     query = input("  Search query: ").strip()
@@ -574,9 +541,6 @@ def console_list_all(conn):
     _print_contacts(rows)
 
 
-# ──────────────────────────────────────────────────────────────
-# Import / Export menus
-# ──────────────────────────────────────────────────────────────
 def console_export_json(conn):
     _header("Export to JSON")
     path = input("  Output file [contacts_export.json]: ").strip() or "contacts_export.json"
@@ -595,9 +559,7 @@ def console_import_csv(conn):
     import_csv(conn, path)
 
 
-# ──────────────────────────────────────────────────────────────
-# Main menu
-# ──────────────────────────────────────────────────────────────
+ 
 MENU = """
   ┌─────────────────────────────────────────┐
   │           PhoneBook  –  Menu            │
@@ -648,7 +610,7 @@ def main():
         print(f"\n  ✗  Cannot connect to database:\n  {e}")
         sys.exit(1)
 
-    # Apply schema & procedures on first run
+
     try:
         bootstrap_schema(conn)
     except psycopg2.Error as e:
