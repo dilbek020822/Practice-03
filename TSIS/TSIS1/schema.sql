@@ -1,15 +1,9 @@
--- ============================================================
---  PhoneBook  –  Extended Schema  (Practice 9)
---  Extends the base contacts table from Practice 7/8
--- ============================================================
 
--- 1. Groups / categories
 CREATE TABLE IF NOT EXISTS groups (
     id   SERIAL PRIMARY KEY,
     name VARCHAR(50) UNIQUE NOT NULL
 );
 
--- Seed default categories
 INSERT INTO groups (name) VALUES
     ('Family'),
     ('Work'),
@@ -17,7 +11,6 @@ INSERT INTO groups (name) VALUES
     ('Other')
 ON CONFLICT (name) DO NOTHING;
 
--- 2. Contacts  (base table already exists; add new columns)
 CREATE TABLE IF NOT EXISTS contacts (
     id         SERIAL PRIMARY KEY,
     name       VARCHAR(100) NOT NULL,
@@ -29,7 +22,6 @@ ALTER TABLE contacts
     ADD COLUMN IF NOT EXISTS birthday DATE,
     ADD COLUMN IF NOT EXISTS group_id INTEGER REFERENCES groups(id);
 
--- 3. Phones  –  1-to-many per contact
 CREATE TABLE IF NOT EXISTS phones (
     id         SERIAL PRIMARY KEY,
     contact_id INTEGER      NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
@@ -38,8 +30,6 @@ CREATE TABLE IF NOT EXISTS phones (
                             CHECK (type IN ('home', 'work', 'mobile'))
 );
 
--- Migrate existing single-phone column into the phones table (safe to run
--- multiple times because of the WHERE NOT EXISTS guard).
 DO $$
 BEGIN
     IF EXISTS (
